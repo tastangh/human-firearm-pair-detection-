@@ -1,0 +1,31 @@
+Her satır bir sahneye karşılık geliyor ve şu bilgileri içeriyor:
+```txt
+[image_id] [person_bbox] [weapon_bbox] [label]
+```
+Örnek satır:
+```
+people+holding+weapons_94 260 86 710 412 444 127 1023 649 1
+```
+
+Bu:
+- `image_id`: Görüntü adı
+- `260 86 710 412`: Kişiye ait bounding box (x1, y1, x2, y2)
+- `444 127 1023 649`: Silaha ait bounding box
+- `1`: Etiket (1 = eşleşme, 2 = farklı kişi/silah çifti)
+
+#### 2. **Amaç**
+Modelin öğrenmesini istediğimiz şey:
+> **"Sahnede kişi ve silah var mı, ve bu kişi silahı gerçekten tutuyor mu?"**
+
+Yani hedefimiz **kişi-silah çiftlerini** bulmak ve bunların **ilişkili (1) veya ilişkili değil (2)** olduğunu anlamak.
+
+#### 3. **Veri Dağılımı**
+İlk analizde gördüğüm kadarıyla:
+- Etiket olarak hem `1` hem de `2` mevcut → bu **binary classification** (ilişkili/ilişkisiz) için ideal.
+- Her bir görselde birden fazla kişi-silah çifti olabilir.
+
+#### 4. **Test ve Eğitim**
+`train.txt` ve `test.txt` dosyaları:
+- Her bir dosya sadece `image_id` içeriyor.
+- Bu ID’lere karşılık gelen çiftlerin detayları `tagged_file*.txt` dosyalarında var.
+
