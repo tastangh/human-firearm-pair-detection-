@@ -8,9 +8,9 @@ from sklearn.metrics import classification_report, accuracy_score, confusion_mat
 from tqdm import tqdm
 import numpy as np
 
-import config # config.py'yi import ediyoruz
-from dataset import LFCHumanFirearmROIDataset
-from model import DualStreamCNN
+import config
+from dataset import LFCPairedAttentionDataset # Güncellendi
+from model import SaliencySingleStreamCNN # Güncellendi
 from utils import plot_confusion_matrix, load_checkpoint
 
 def evaluate_model(model_path):
@@ -20,16 +20,14 @@ def evaluate_model(model_path):
         return
 
     # Test veri transformları (eğitimdeki validation ile aynı olmalı)
-    test_transforms = transforms.Compose([
-        transforms.Resize(config.ROI_SIZE),
+    test_pbb_transforms = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    test_dataset = LFCHumanFirearmROIDataset(csv_file=config.TEST_CSV,
-                                            project_root_path=config.PROJECT_ROOT, # Proje kök yolunu aktar
-                                            transform_human=test_transforms,
-                                            transform_weapon=test_transforms,
+    test_dataset = LFCPairedAttentionDataset(csv_file=config.TEST_CSV,
+                                            project_root_path=config.PROJECT_ROOT,
+                                            transform_pbb=test_pbb_transforms,
                                             roi_size=config.ROI_SIZE)
     
     if len(test_dataset) == 0:
@@ -40,65 +38,67 @@ def evaluate_model(model_path):
     print(f"Test için {len(test_dataset)} örnek, {len(test_dataloader)} batch.")
 
     # Modeli yükle
-    model = DualStreamCNN(num_classes=1, backbone_name='resnet34', pretrained=False).to(config.DEVICE)
+    model = SaliencySingleStreamCNN(
+        num_classes_classifier=config.NUM_CLASSES_CLASSIFIER,
+        backbone_name='resnet18', # Kaydedilen modelle aynı olmalı
+        pretrained=False, # Ağırlıkları checkpoint'ten yükleyeceğiz
+        num_attention_channels=config.NUM_ATTENTION_CHANNELS,
+        num_reconstruction_channels=config.NUM_RECONSTRUCTION_CHANNELS,
+        roi_size=config.ROI_SIZE
+    ).to(config.DEVICE)
     
-    # Checkpoint yükleme
-    # load_checkpoint fonksiyonu zaten utils.py içinde tanımlı ve os.path.exists kontrolünü yapıyor.
     model, _, _ = load_checkpoint(model_path, model, optimizer=None, device=config.DEVICE)
-    # Eğer load_checkpoint sadece modeli döndürüyorsa ve dosya bulunamazsa bir uyarı basıp çıkabilir veya
-    # ilk model örneğini (ağırlıksız) döndürebilir. Hata kontrolü load_checkpoint içinde yapılmalı.
-    # Hata durumunda devam etmemek için load_checkpoint'un dönüşünü kontrol edebilirsiniz.
-    # Örneğin, load_checkpoint dosya bulunamazsa None döndürürse:
-    # if model is None:
-    #     print(f"HATA: Model yüklenemedi: {model_path}")
-    #     return
-    # Ancak mevcut load_checkpoint yapınızda, bulunamazsa orijinal modeli döndürüyor.
+    # Not: load_checkpoint dosya bulunamazsa uyarı verir ve orijinal modeli döndürür.
+    # Eğer checkpoint'teki model yapısı mevcut model yapısıyla eşleşmiyorsa hata alırsınız.
 
     model.eval()
     all_labels = []
-    all_preds = []
+    all_preds_class = []
 
     progress_bar_test = tqdm(test_dataloader, desc="Test Ediliyor", unit="batch")
 
     with torch.no_grad():
-        for human_rois, weapon_rois, labels in progress_bar_test:
-            human_rois = human_rois.to(config.DEVICE)
-            weapon_rois = weapon_rois.to(config.DEVICE)
+        for pbb_images, human_masks_gt, firearm_masks_gt, labels in progress_bar_test:
+            pbb_images = pbb_images.to(config.DEVICE)
+            human_masks_input = human_masks_gt.to(config.DEVICE).float()
+            firearm_masks_input = firearm_masks_gt.to(config.DEVICE).float()
             
-            outputs = model(human_rois, weapon_rois)
-            preds_probs = torch.sigmoid(outputs).cpu()
-            predicted_classes = (preds_probs > 0.5).float().squeeze().numpy()
+            # Model artık iki çıktı veriyor, sadece sınıflandırma çıktısını kullanacağız
+            classification_outputs, _ = model(pbb_images, human_masks_input, firearm_masks_input)
+            
+            preds_probs = torch.sigmoid(classification_outputs).cpu()
+            predicted_classes = (preds_probs > 0.5).float().squeeze().numpy() # squeeze tek elemanlı batch'ler için
 
             all_labels.extend(labels.numpy())
-            if predicted_classes.ndim == 0:
-                 all_preds.append(predicted_classes.item())
-            else:
-                 all_preds.extend(predicted_classes.tolist())
+            if predicted_classes.ndim == 0: # Tek bir örnekse
+                 all_preds_class.append(predicted_classes.item())
+            else: # Batch ise
+                 all_preds_class.extend(predicted_classes.tolist())
 
-    if not all_labels or not all_preds:
-        print("Değerlendirme için etiket veya tahmin üretilemedi.")
+    if not all_labels or not all_preds_class:
+        print("Değerlendirme için etiket veya sınıflandırma tahmini üretilemedi.")
         return
 
-    accuracy = accuracy_score(all_labels, all_preds)
-    report = classification_report(all_labels, all_preds, target_names=config.CLASSES, digits=4, zero_division=0) # zero_division eklendi
+    accuracy = accuracy_score(all_labels, all_preds_class)
+    report = classification_report(all_labels, all_preds_class, target_names=config.CLASSES, digits=4, zero_division=0)
     
-    print(f"\nTest Doğruluğu: {accuracy:.4f}")
+    print(f"\nTest Sınıflandırma Doğruluğu: {accuracy:.4f}")
     print("\nSınıflandırma Raporu:")
     print(report)
 
-    # Sonuçları kaydetmek için config.RESULTS_DIR kullan
-    # config.py zaten RESULTS_DIR yoksa oluşturuyor.
-    metrics_file_path = os.path.join(config.RESULTS_DIR, "test_metrics.txt")
-    confusion_matrix_save_path = os.path.join(config.RESULTS_DIR, "confusion_matrix.png")
+    # Sonuçları kaydet
+    base_model_name = os.path.splitext(os.path.basename(model_path))[0]
+    metrics_file_path = os.path.join(config.RESULTS_DIR, f"test_metrics_{base_model_name}.txt")
+    confusion_matrix_save_path = os.path.join(config.RESULTS_DIR, f"confusion_matrix_{base_model_name}.png")
     
     with open(metrics_file_path, "w") as f:
         f.write(f"Model Path: {model_path}\n")
-        f.write(f"Test Accuracy: {accuracy:.4f}\n\n")
+        f.write(f"Test Classification Accuracy: {accuracy:.4f}\n\n")
         f.write("Classification Report:\n")
         f.write(report)
     print(f"Test metrikleri {metrics_file_path} dosyasına kaydedildi.")
 
-    plot_confusion_matrix(all_labels, all_preds, class_names=config.CLASSES, save_path=confusion_matrix_save_path)
+    plot_confusion_matrix(all_labels, all_preds_class, class_names=config.CLASSES, save_path=confusion_matrix_save_path)
     print(f"Karışıklık matrisi {confusion_matrix_save_path} dosyasına kaydedildi.")
 
 
