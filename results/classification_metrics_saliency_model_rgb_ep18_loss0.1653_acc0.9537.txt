@@ -1,0 +1,15 @@
+Model Path: saved_models/saliency_model_rgb_ep18_loss0.1653_acc0.9537.pth
+Loaded Epoch: 18
+Backbone: resnet18
+Color Space: RGB
+Test Classification Accuracy: 0.9440
+
+Classification Report:
+              precision    recall  f1-score   support
+
+ not_carrier     0.9385    0.9035    0.9207       456
+     carrier     0.9469    0.9667    0.9567       811
+
+    accuracy                         0.9440      1267
+   macro avg     0.9427    0.9351    0.9387      1267
+weighted avg     0.9438    0.9440    0.9437      1267

@@ -13,17 +13,22 @@ TRAIN_CSV = os.path.join(DATA_ANALYSIS_DIR, "train_annotations_parsed.csv")
 TEST_CSV = os.path.join(DATA_ANALYSIS_DIR, "test_annotations_parsed.csv")
 
 # Görüntü ve ROI Ayarları
-IMAGE_DIR_TRAIN_UNUSED = os.path.join(DATA_DIR, "Training_Dataset/images/") # Artık doğrudan kullanılmıyor
-IMAGE_DIR_TEST_UNUSED = os.path.join(DATA_DIR, "Test_Dataset/images/")   # Artık doğrudan kullanılmıyor
 ROI_SIZE = (224, 224) # PBB ve maskelerin hedef boyutu
+COLOR_SPACE = "YCbCr" # "RGB" veya "YCbCr" olabilir
 
 # Eğitim Hiperparametreleri
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-BATCH_SIZE = 16 # GPU belleğine göre ayarlayın
+BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
-NUM_EPOCHS = 30 # Ayarlayın
-NUM_WORKERS = 2 # Sisteminizin çekirdek sayısına göre ayarlayın
-LAMBDA_RECONSTRUCTION = 0.5 # Rekonstrüksiyon kaybının ağırlığı (E-HFPL için)
+NUM_EPOCHS = 30
+NUM_WORKERS = 2
+LAMBDA_RECONSTRUCTION = 0.5
+
+# Nesne Tespiti Ayarları (evaluate_with_detection.py için)
+HUMAN_DETECTION_THRESHOLD = 0.7
+WEAPON_DETECTION_THRESHOLD = 0.5
+INTERACTION_THRESHOLD_FOR_AP = 0.5
+IOU_THRESHOLD_FOR_AP_MATCHING = 0.5
 
 # Model Kaydetme
 MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT, "saved_models")
@@ -36,7 +41,9 @@ if not os.path.exists(RESULTS_DIR):
     os.makedirs(RESULTS_DIR)
 
 # Sınıflar
-CLASSES = ['not_carrier', 'carrier'] # İkili sınıflandırma için
-NUM_CLASSES_CLASSIFIER = 1 # BCEWithLogitsLoss için modelin sınıflandırma başlığı 1 çıktı verir
-NUM_ATTENTION_CHANNELS = 2 # İnsan ve Silah için dikkat maskeleri
-NUM_RECONSTRUCTION_CHANNELS = 2 # İnsan ve Silah için yeniden oluşturulacak maskeler
+CLASSES = ['not_carrier', 'carrier']
+NUM_CLASSES_CLASSIFIER = 1
+NUM_ATTENTION_CHANNELS = 2
+NUM_RECONSTRUCTION_CHANNELS = 2
+
+COCO_PERSON_CLASS_ID = 1
