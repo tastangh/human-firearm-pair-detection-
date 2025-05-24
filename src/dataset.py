@@ -30,7 +30,7 @@ class LFCPairedAttentionDataset(Dataset):
             normalize_mean = [0.485, 0.456, 0.406]
             normalize_std = [0.229, 0.224, 0.225]
             if self.color_space == "YCbCr":
-                pass # YCbCr için özel normalizasyon gerekebilir
+                pass 
             self.transform_pbb_img = transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize(mean=normalize_mean, std=normalize_std)

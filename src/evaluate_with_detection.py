@@ -8,13 +8,11 @@ import pandas as pd
 import os
 import numpy as np
 from tqdm import tqdm
-# from torch.utils.data import Dataset, DataLoader # Gerekirse
 
 import config
 from model import SaliencySingleStreamCNN
 from utils import load_checkpoint
 from torchmetrics.detection import MeanAveragePrecision
-# from torchvision.ops import box_iou # Gerekirse manuel IoU için
 
 def create_pbb_and_masks_from_detections(pil_image_rgb, h_box_coords, w_box_coords, roi_size, color_space_cfg, device):
     img_w, img_h = pil_image_rgb.size
@@ -22,7 +20,7 @@ def create_pbb_and_masks_from_detections(pil_image_rgb, h_box_coords, w_box_coor
     if color_space_cfg == "YCbCr":
         pil_image_processed = pil_image_rgb.convert("YCbCr")
     else:
-        pil_image_processed = pil_image_rgb # Zaten RGB ise tekrar convert etmeye gerek yok
+        pil_image_processed = pil_image_rgb 
 
     pbb_x1 = min(h_box_coords[0], w_box_coords[0])
     pbb_y1 = min(h_box_coords[1], w_box_coords[1])
@@ -54,7 +52,6 @@ def create_pbb_and_masks_from_detections(pil_image_rgb, h_box_coords, w_box_coor
     norm_mean = [0.485,0.456,0.406]; norm_std=[0.229,0.224,0.225]
     if color_space_cfg == "YCbCr": pass # Özel YCbCr normalizasyonu
     
-    # 'transforms' artık global olarak tanımlı olmalı
     transform_img = transforms.Compose([ 
         transforms.ToTensor(), 
         transforms.Normalize(mean=norm_mean, std=norm_std)
@@ -67,7 +64,6 @@ def create_pbb_and_masks_from_detections(pil_image_rgb, h_box_coords, w_box_coor
 
 def apply_max_out_detections(image_level_predictions):
     if not image_level_predictions: return []
-    # image_level_predictions: [{"h_box":tensor, "w_box":tensor, "h_score":float, "w_score":float, "interaction_score":float, "pbb_for_map":tensor}, ...]
     
     weapon_to_interactions = {}
     for pred_dict in image_level_predictions:
@@ -105,8 +101,7 @@ def evaluate_full_system(classifier_model_path, use_gt_weapons_for_debug=True, a
         weights=torchvision.models.detection.FasterRCNN_ResNet50_FPN_Weights.COCO_V1
     ).eval().to(device)
 
-    # !!! SİLAH TESPİT MODELİ YÜKLEME YERİ (Şimdilik placeholer veya GT) !!!
-    weapon_detector = None # Eğer gerçek bir modeliniz yoksa
+    weapon_detector = None 
     if not use_gt_weapons_for_debug and weapon_detector is None:
         print("UYARI: Gerçek silah tespit modeli yüklenmedi ve GT kullanılmıyor. Silah tespiti yapılmayacak.")
 
@@ -133,7 +128,7 @@ def evaluate_full_system(classifier_model_path, use_gt_weapons_for_debug=True, a
         gt_annotations_for_image = test_df[test_df['image_path'] == relative_img_path]
         target_pbb_for_map_list = []
         for _, row in gt_annotations_for_image.iterrows():
-            if int(row['label']) == 1: # Sadece "carrier" (hold) ground truth'ları
+            if int(row['label']) == 1:
                 h_gt_b = [row['human_x1'],row['human_y1'],row['human_x2'],row['human_y2']]
                 w_gt_b = [row['weapon_x1'],row['weapon_y1'],row['weapon_x2'],row['weapon_y2']]
                 pbb_x1=min(h_gt_b[0],w_gt_b[0]); pbb_y1=min(h_gt_b[1],w_gt_b[1])
@@ -142,7 +137,7 @@ def evaluate_full_system(classifier_model_path, use_gt_weapons_for_debug=True, a
         
         current_img_targets = dict(
             boxes=torch.stack(target_pbb_for_map_list).float().to(device) if target_pbb_for_map_list else torch.empty((0,4), device=device),
-            labels=torch.zeros(len(target_pbb_for_map_list), dtype=torch.long, device=device) # "hold" sınıfı için etiket 0
+            labels=torch.zeros(len(target_pbb_for_map_list), dtype=torch.long, device=device) 
         )
 
         with torch.no_grad():
