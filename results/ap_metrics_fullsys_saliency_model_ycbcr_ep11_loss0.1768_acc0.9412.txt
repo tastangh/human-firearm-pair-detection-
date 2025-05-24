@@ -5,5 +5,6 @@ Color Space: YCbCr
 Human Det Thr: 0.7
 Weapon Det Thr: 0.5 (GT Weapons Used: True)
 Max-Out Applied: True
+Visuals Saved (per image if enabled): 1 with score > 0.7
 AP_hold (mAP@.50 with IOU_thr=0.5): 0.7877
 Full torchmetrics results: {'map': tensor(0.7877), 'map_50': tensor(0.7877), 'map_75': tensor(-1.), 'map_small': tensor(-1.), 'map_medium': tensor(-1.), 'map_large': tensor(0.7909), 'mar_1': tensor(0.7682), 'mar_10': tensor(0.9125), 'mar_100': tensor(0.9125), 'mar_small': tensor(-1.), 'mar_medium': tensor(-1.), 'mar_large': tensor(0.9125), 'map_per_class': tensor(0.7877), 'mar_100_per_class': tensor(0.9125), 'classes': tensor(0, dtype=torch.int32)}

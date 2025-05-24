@@ -1,4 +1,4 @@
 /data
 *.pth
 *.pyc
-/visual_outputs
+results/visual_outputs
