@@ -3,7 +3,6 @@ import torch
 import os
 
 # Projenin kök dizinini bul
-# Bu config.py dosyası src/ içinde olduğu için, ../ proje kökünü verir
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # Veri Yolları (Proje köküne göre)
@@ -14,16 +13,22 @@ TRAIN_CSV = os.path.join(DATA_ANALYSIS_DIR, "train_annotations_parsed.csv")
 TEST_CSV = os.path.join(DATA_ANALYSIS_DIR, "test_annotations_parsed.csv")
 
 # Görüntü ve ROI Ayarları
-IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, "Training_Dataset/images/")
-IMAGE_DIR_TEST = os.path.join(DATA_DIR, "Test_Dataset/images/")
-ROI_SIZE = (224, 224)
+ROI_SIZE = (224, 224) # PBB ve maskelerin hedef boyutu
+COLOR_SPACE = "YCbCr" # "RGB" veya "YCbCr" olabilir
 
 # Eğitim Hiperparametreleri
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
-NUM_EPOCHS = 25
+NUM_EPOCHS = 30
 NUM_WORKERS = 2
+LAMBDA_RECONSTRUCTION = 0.5
+
+# Nesne Tespiti Ayarları (evaluate_with_detection.py için)
+HUMAN_DETECTION_THRESHOLD = 0.7
+WEAPON_DETECTION_THRESHOLD = 0.5
+INTERACTION_THRESHOLD_FOR_AP = 0.5
+IOU_THRESHOLD_FOR_AP_MATCHING = 0.5
 
 # Model Kaydetme
 MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT, "saved_models")
@@ -37,6 +42,8 @@ if not os.path.exists(RESULTS_DIR):
 
 # Sınıflar
 CLASSES = ['not_carrier', 'carrier']
-NUM_CLASSES = len(CLASSES) # İkili sınıflandırma için bu 2 olacak, ama BCEWithLogitsLoss ile model çıktısı 1 olacak.
-                           # Eğer CrossEntropyLoss ve model çıktısı 2 ise NUM_CLASSES = 2 kullanılır.
-                           # Mevcut modelimiz (DualStreamCNN) num_classes=1 bekliyor.
+NUM_CLASSES_CLASSIFIER = 1
+NUM_ATTENTION_CHANNELS = 2
+NUM_RECONSTRUCTION_CHANNELS = 2
+
+COCO_PERSON_CLASS_ID = 1
